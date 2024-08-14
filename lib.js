@@ -9,25 +9,6 @@ canvas.setAttribute('draggable', false);
 var c = canvas.getContext("2d");
 document.addEventListener('contextmenu', event => event.preventDefault());
 
-function converttxttoArray(filename) {
-    var reader = (window.XMLHttpRequest != null) 
-                 ? new XMLHttpRequest() 
-                 : new ActiveXObject("Microsoft.XMLHTTP");
-    reader.open("GET", filename, false);
-    reader.onload = function() {
-        let output = [];
-        let res = this.responseText.split('\n');
-        res.forEach(line => {
-            if(line.length > 0){
-                output.push(line);
-            }
-        })
-        return output
-    }
-    reader.send();
-    return reader.onload();
-}
-
 const windowW = canvas.width;
 const windowH = canvas.height;
 
@@ -57,12 +38,15 @@ function gamepadHandler(e,connect){
 
 let Camera = {scale:1,position:[0,0],target:[0,0],speed:0.1}
 
-var mouse = {x: 0, y: 0, scroll:0,oldx: 0, oldy: 0, button: {left: false, middle: false, right: false}};
+var mouse = {x: 0, y: 0, scroll:0,oldx: 0, oldy: 0,
+	pressed: {left: false, middle: false, right: false},
+	downOld: {left: false, middle: false, right: false},
+	down: {left: false, middle: false, right: false}
+};
 
 var oldMouseDelta = {x:0,y:0}
 
 this.canvas.addEventListener('wheel',function(event){
-    
     mouse.scroll = event
     event.preventDefault();
 }, false);
@@ -74,16 +58,38 @@ canvas.addEventListener('mousemove', function(evt) {
     mouse.y = evt.clientY - canvas.getBoundingClientRect().top;
 }, false);
 
+function mouseUpdate(){
+	if(mouse.down.right && !mouse.downOld.right){
+		mouse.pressed.right = true;
+		mouse.downOld.right = true;
+	}else{
+		mouse.pressed.right = false;
+	}
+	if(mouse.down.middle && !mouse.downOld.middle){
+		mouse.pressed.middle = true;
+		mouse.downOld.middle = true;
+	}else{
+		mouse.pressed.middle = false;
+	}
+	if(mouse.down.left && !mouse.downOld.left){
+		mouse.pressed.left = true;
+		mouse.downOld.left = true;
+	}else{
+		mouse.pressed.left = false;
+	}
+}
 canvas.addEventListener('mousedown', function(event){
     switch (event.button) {
         case 0:
-            mouse.button.left = true;
+            mouse.down.left = true;
             break;
         case 1:
-            mouse.button.middle = true;
+			mouse.pressed.middle = !(mouse.downOld.middle)
+            mouse.down.middle = true;
             break;
         case 2:
-            mouse.button.right = true;
+			mouse.pressed.right = !(mouse.downOld.right)
+            mouse.down.right = true;
             break;
     }
 });
@@ -91,13 +97,17 @@ canvas.addEventListener('mousedown', function(event){
 canvas.addEventListener('mouseup', function(event){
     switch (event.button) {
         case 0:
-            mouse.button.left = false;
+			mouse.pressed.left = false;
+            mouse.down.left = false;
+            mouse.downOld.left = false;
             break;
         case 1:
-            mouse.button.middle = false;
+            mouse.pressed.middle = false;
+            mouse.down.middle = false;
             break;
         case 2:
-            mouse.button.right = false;
+            mouse.pressed.right = false;
+            mouse.down.right = false;
             break;
     }
 });
@@ -186,6 +196,56 @@ function AABBCollision(rect1, rect2){
     var rect2X = rect2[0], rect2Y = rect2[1], rect2W = rect2[2], rect2H = rect2[3];
     return rect1X < rect2X + rect2W && rect1X + rect1W > rect2X && rect1Y < rect2Y + rect2H && rect1Y + rect1H > rect2Y;
 }
+
+function AABBCollision(rect1, rect2){
+	let checks = [
+        (rect1[0]+rect1[2] >= rect2[0]), (rect1[0] <= rect2[0]+rect2[2]),
+        (rect1[1]+rect1[3] >= rect2[1]), (rect1[1] <= rect2[1]+rect2[3]),
+	];
+	for(check in checks){
+		if(!check){
+			return false;
+		}
+	}
+
+	// just getting the min trans(trans!?!?!)lation vec
+    ytv21 = rect2[1] - (rect1[1]+rect1[3]);
+    ytv12 = (rect2[1]+rect2[3]) - rect1[1];
+
+    xtv21 = rect2[0] - (rect1[0]+rect1[2]);
+    xtv12 = (rect2[0]+rect2[2]) - rect1[0];
+    
+    ytv = abs(ytv21) < abs(ytv12) ? ytv21 : ytv12;
+    xtv = abs(xtv21) < abs(xtv12) ? xtv21 : xtv12;
+    
+    mtv = abs(xtv) < abs(ytv) ? (xtv, 0) : (0,ytv);
+    return mtv
+
+}
+/*
+def AABBCollision(rect1, rect2): # rect = (x,y,w,h) returns min trans vec if true
+    # actual aabb logic, never done it in a list b4 thought itd look neater
+    checks = [
+        (rect1[0]+rect1[2] >= rect2[0]), (rect1[0] <= rect2[0]+rect2[2]),
+        (rect1[1]+rect1[3] >= rect2[1]), (rect1[1] <= rect2[1] + rect2[3])
+    ]
+    for check in checks:
+        if not check:
+            return False
+
+    ytv21 = rect2[1] - (rect1[1]+rect1[3])
+    ytv12 = (rect2[1]+rect2[3]) - rect1[1]
+
+    xtv21 = rect2[0] - (rect1[0]+rect1[2])
+    xtv12 = (rect2[0]+rect2[2]) - rect1[0] 
+    
+    ytv = ytv21 if abs(ytv21) < abs(ytv12) else ytv12
+    xtv = xtv21 if abs(xtv21) < abs(xtv12) else xtv12
+    
+    mtv = (xtv,0) if abs(xtv) < abs(ytv) else (0,ytv)
+    return mtv
+
+*/
 
 const identityTransform = [1,0,0,1,0,0];
 // Drawing
