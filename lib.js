@@ -202,8 +202,8 @@ function AABBCollision(rect1, rect2){
         (rect1[0]+rect1[2] >= rect2[0]), (rect1[0] <= rect2[0]+rect2[2]),
         (rect1[1]+rect1[3] >= rect2[1]), (rect1[1] <= rect2[1]+rect2[3]),
 	];
-	for(check in checks){
-		if(!check){
+	for(i in checks){
+		if(!checks[i]){
 			return false;
 		}
 	}
@@ -215,10 +215,10 @@ function AABBCollision(rect1, rect2){
     xtv21 = rect2[0] - (rect1[0]+rect1[2]);
     xtv12 = (rect2[0]+rect2[2]) - rect1[0];
     
-    ytv = abs(ytv21) < abs(ytv12) ? ytv21 : ytv12;
-    xtv = abs(xtv21) < abs(xtv12) ? xtv21 : xtv12;
+    ytv = math.abs(ytv21) < math.abs(ytv12) ? ytv21 : ytv12;
+    xtv = math.abs(xtv21) < math.abs(xtv12) ? xtv21 : xtv12;
     
-    mtv = abs(xtv) < abs(ytv) ? (xtv, 0) : (0,ytv);
+    mtv = math.abs(xtv) < math.abs(ytv) ? [xtv, 0] : [0,ytv];
     return mtv
 
 }
@@ -482,6 +482,19 @@ class TextBox {
             c.fillText(newLines[k], x, y+(k*this.textSize));
         }
     }
+}
+function scalMultiply(scalar, vec){
+	return [scalar*vec[0], scalar*vec[1]];
+}
+function add(vec1, vec2){
+	return [vec1[0]+vec2[0],vec1[1]+vec2[1]];
+}
+function normalize(vec){
+	let r = Math.sqrt(vec[0]**2 + vec[1]**2);
+	if(r == 0){
+		r = 1;
+	}
+    return math.divide(vec, r);
 }
 function enlargeRect(inputRect, a,b, preserveBottomVerticesY=false){
     let rect = inputRect;

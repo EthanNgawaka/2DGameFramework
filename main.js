@@ -1,143 +1,80 @@
-class Collider{
-	constructor(rect, collisionLayer){
-		this.rect = rect;
-		this.collisionLayer = collisionLayer;
-	}
-
-	checkCollision(otherCollider){
-		return AABBCollision(this.rect, otherCollider.rect);
-	}
-}
-
-class Entity{
-	constructor(id, x, y, w, h, collisionLayer){
-		this.x = x;
-		this.y = y;
-		this.w = w;
-		this.h = h;
-		this.collider = new Collider(this.rect, collisionLayer);
-		this.id = id
-	}
-
-	update(dt){ // to be overriden
-		console.log("Update was not overriden! entity_id: " + this.id);
-	}
-	
-	draw(){ // to be overriden
-		console.log("Draw was not overriden! entity_id: " + this.id);
-	}
-
-	onCollision(otherEntity){ // to be overriden
-		console.log("Collided with entity_id:" + otherEntity.id);
-	}
-	
-	get rect(){
-		return [x,y,w,h];
-	}
-}
-
-class RigidBody extends Entity{
-	constructor(id, x, y, w, h, collisionLayer){
-		super(id, x, y, w, h, collisionLayer);
-		this.invMass = 1; // and other various physics attributes
-		this.vel = [0,0];
-		this.forces = [0,0];
-		this.drag = 0.95
-	}
-
-	update(dt){
-		accel = math.multiply(this.invMass, this.forces);
-		this.forces = [0,0];
-
-		this.vel = math.add(this.vel, accel);
-		this.vel = math.multiply(this.drag, this.vel);
-
-		this.x += this.vel[0];
-		this.y += this.vel[1];
-	}
-
-	applyForce(forceVec){
-		this.forces = math.add(this.forces, forceVec);
-	}
-
-	draw(){
-		// drawing can be handled by child classes
-		drawRect(this.rect, "black");
-	}
-}
-
-class StaticBody extends Entity{
-	constructor(id, x, y, w, h, collisionLayer){
-		super(id, x, y, w, h, collisionLayer);
-		this.invMass = 1; // and other various physics attributes
-	}
-
-	update(dt){
-		// static obj doesnt need to update 
-	}
-
-	draw(){
-		// drawing can be handled by child classes
-		drawRect(this.rect, "black");
-	}
-}
-
-/*
- * so basically, a world contains a bunch of entities all of which have basic
- * functions like draw, update, onCollision, and a collider obj which
- * contains a collisionLayer, every entity on the same layer is checked for collision
- * maybe change later to handle multiple layers that the obj belongs to
- * then layers the obj collides with
- * to create other entities like a player class
- * class Player extends RigidBody{}
- * then just override draw and update but make sure to call super.update() for physics
- * stuff. Also override on collision funciton if needed, on collision just resolves
- * by moving mtv and other physicsy shit
-*/
-class World{
+class Player extends RigidBody{
 	constructor(){
-		this.entities = {};
+		super('player', 500,windowH*0.65,32,32);
+		this.speed = 2000;
+		this.vel = [0, 1000];
 	}
 
 	update(dt){
-		for(let [id, entity] in Object.entries(this.entities)){
-			entity.update(dt);
-		}
+		this.input();
+		super.update(dt);
 	}
 
+	input(){
+		let movementVec = [0,0];
+		if(keyPressed("KeyW")){
+			this.vel[1] = -1000;
+		}
+		if(checkKey("KeyA")){
+			movementVec[0] = -1;
+		}
+		if(checkKey("KeyS")){
+			movementVec[1] = 1;
+		}
+		if(checkKey("KeyD")){
+			movementVec[0] = 1;
+		}
+		this.applyForce(math.multiply(normalize(movementVec), this.speed));
+	}
+	
 	draw(){
-		for(let [id, entity] in Object.entries(this.entities)){
-			entity.draw();
-		}
-	}
-
-	addEntity(entity){
-		this.entities.push(entity);
-	}
-
-	removeEntity(id){
-		delete this.entities[id]; // might cause issues idk
-	}
-
-	collisions(){
-		// well obvs
+		drawRect(this.rect, "blue");
 	}
 }
+class Wall extends StaticBody{
+	constructor(x, y, w, h){
+		super("wall", x, y, w, h);
+	}
+}
+class Box extends RigidBody{
+	constructor(x, y, w, h, mass = 1){
+		super("box", x, y, w, h,  1/mass);
+		this.vel = [0,100];
+	}
+	update(dt){
+		super.update(dt);
+	}
+}
+const world = new World();
+
+world.addEntity(new Player(), "player", ["boxes", "walls"]);
+world.addEntity(new Wall(0,windowH-100,windowW,100), "walls", ["boxes", "player"]);
+world.addEntity(new Box(windowW/2,0,64,64,10), "boxes", ["boxes", "walls", "player"]);
 
 function draw(){
-	
+	drawRect([0,0,windowW,windowH],"white");
+	world.draw();
 }
 
-function update(){
-
+function update(dt){
+	world.update(dt);
+	world.collisions();
 }
 
-function main(){
-    update();
+let previousTime = 0
+function main(currentTime){ // requestAnimationFrame passes in a timestamp
+	if(previousTime < 150){previousTime=currentTime;} // prevents skipping at startup
+	const dt = (currentTime-previousTime)/1000; // in seconds
+	previousTime = currentTime;
+
+    update(dt);
     draw();
 
 	oldKeys = {...keys};
 	mouseUpdate();
+
+	// recursive loop
+	requestAnimationFrame(main);
 }
 
-setInterval(main, 1000/60)
+requestAnimationFrame(main);
