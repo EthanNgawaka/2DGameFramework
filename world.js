@@ -12,12 +12,12 @@ class Collider{
 }
 
 class Entity{
-	constructor(id, x, y, w, h, collideables){
+	constructor(id, x, y, w, h){
 		this.x = x;
 		this.y = y;
 		this.w = w;
 		this.h = h;
-		this.collider = new Collider(this.rect, collideables);
+		this.collider = new Collider(this.rect, []);
 		this.id = id
 	}
 
@@ -84,11 +84,15 @@ class RigidBody extends Entity{
 			let mtv = this.collider.checkCollision(otherEntity);
 			let norm = normalize(mtv);
 
-			this.x += mtv[0]/2;
-			this.y += mtv[1]/2;
+			let offset = 0.6;
+			// need to figure out a way to handle objs being pushed into
+			// static objs, maybe checking collisions on both after move 
+			// and undoing one if its colliding with another but thats expensive
+			this.x += mtv[0]*offset;
+			this.y += mtv[1]*offset;
 			this.collider.rect = this.rect;
-			otherEntity.x -= mtv[0]/2;
-			otherEntity.y -= mtv[1]/2;
+			otherEntity.x -= mtv[0]*offset;
+			otherEntity.y -= mtv[1]*offset;
 			otherEntity.collider.rect = otherEntity.rect;
 
 			let e_1 = this.coeff_restitution;
@@ -194,7 +198,7 @@ class World{
 
 	addEntity(entity, collisionTag, tagsToCollideWith){
 		let inputEntity = entity;
-		inputEntity.collideables = tagsToCollideWith;
+		inputEntity.collider.collideables = tagsToCollideWith;
 		this.entities[entity.id] = inputEntity; // add collideables to entity for collision stuff
 
 		if(collisionTag in this.collisionLayers){ // create collision layer if necessary
@@ -208,21 +212,19 @@ class World{
 		delete this.entities[id]; // might cause issues idk
 	}
 
-	collisions(){
-		for(let i in this.entities){
-			const entity = this.entities[i];
-		}
-		for(let i in this.entities){
-			// collision layers not working yet but just get it working first
-			const entity = this.entities[i];
-			for(let j in this.entities){
-				if(i != j){
-					const otherEntity = this.entities[j];
-					if(entity.collider.checkCollision(otherEntity.collider)){
-						entity.onCollision(otherEntity);
-					}
+	checkCollisions(entity){
+		for(let tag of  entity.collider.collideables){
+			for(let id of this.collisionLayers[tag]){
+				const otherEntity = this.entities[id];
+				if(entity.collider.checkCollision(otherEntity.collider)){
+					entity.onCollision(otherEntity);
 				}
 			}
+		}
+	}
+	collisions(){
+		for(let i in this.entities){
+			this.checkCollisions(this.entities[i]);
 		}
 	}
 }
