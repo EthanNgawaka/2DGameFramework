@@ -1,3 +1,4 @@
+let world = new World;
 function draw(){
 	drawRect([0,0,windowW,windowH],"white");
 	world.draw();
