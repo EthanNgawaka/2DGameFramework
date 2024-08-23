@@ -1,5 +1,12 @@
 let sceneManager = new SceneManager();
 
+/*
+let sound = new Howl({
+	src: ["kill_him.ogg"],
+});
+*/
+
+
 class Player extends RigidBody{
 	constructor(){
 		super("p1", 0,0,32,32, "Player");
