@@ -36,16 +36,21 @@ class Entity{
 	get rect(){
 		return [this.x,this.y,this.w,this.h];
 	}
+
+	get center(){
+		return {x:this.x+this.w/2, y:this.y+this.h/2};
+	}
 }
 
 class RigidBody extends Entity{
-	constructor(id, x, y, w, h, invMass=1, coeff_restitution=0.1, grav=gravity){
+	constructor(id, x, y, w, h, invMass=1, coeff_restitution=0.1, grav=gravity, drag=airFric){
 		super(id, x, y, w, h);
 		this.invMass = invMass; // and other various physics attributes
 		this.coeff_restitution = coeff_restitution;
 		this.vel = [0, 0];
 		this.forces = [0,0];
 		this.gravity = grav;
+		this.drag = drag
 	}
 
 	update(dt){
@@ -180,6 +185,7 @@ class World{
 		this.entities = {};
 		// "id": {collisionTag, collisions}
 		this.collisionLayers = {};
+		this.toRemove = [];
 	}
 
 	update(dt){
@@ -187,6 +193,14 @@ class World{
 			let entity = this.entities[id];
 			entity.update(dt);
 		}
+		for(let id of this.toRemove){
+			for(let tag in this.collisionLayers){
+				this.collisionLayers[tag] = this.collisionLayers[tag].filter(x => !this.toRemove.includes(x));
+			}
+			delete this.entities[id];
+			
+		}
+		this.toRemove = [];
 	}
 
 	draw(){
@@ -208,17 +222,22 @@ class World{
 		}
 	}
 
-	removeEntity(id){
-		delete this.entities[id]; // might cause issues idk
+	deleteEntity(id){
+		this.toRemove.push(id);
 	}
 
 	checkCollisions(entity){
 		for(let tag of  entity.collider.collideables){
-			for(let id of this.collisionLayers[tag]){
-				const otherEntity = this.entities[id];
-				if(entity.collider.checkCollision(otherEntity.collider)){
-					entity.onCollision(otherEntity);
+			try{
+				for(let id of this.collisionLayers[tag]){
+					const otherEntity = this.entities[id];
+					if(entity.collider.checkCollision(otherEntity.collider)){
+						entity.onCollision(otherEntity);
+					}
 				}
+			}
+			catch(e){
+				console.log(e);
 			}
 		}
 	}
